@@ -88,16 +88,20 @@ static const char *vert_shader_text =
 	"#version 300 es \n"
 	"uniform mat4 rotation;\n"
 	"layout(location = 0) in vec4 pos;\n"
+	"layout(location = 1) in vec3 color;\n"
+	"out vec3 v_color;\n"
 	"void main() {\n"
 	"  gl_Position = rotation * pos;\n"
+	"  v_color = color;\n"
 	"}\n";
 
 static const char *frag_shader_text =
 	"#version 300 es \n"
 	"precision mediump float;\n"
-	"out vec4 fragColor;\n"
+	"in vec3 v_color;\n"
+	"layout (location = 0) out vec4 fragColor;\n"
 	"void main() {\n"
-	"  fragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
+	"  fragColor = vec4(v_color, 1.0);\n"
 	"}\n";
 
 static int running = 1;
@@ -334,10 +338,13 @@ redraw(void *data, struct wl_callback *callback, uint32_t time)
 
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, verts);
 	glEnableVertexAttribArray(0);
-
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, colors);
+	glEnableVertexAttribArray(1);
+	
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 
 	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
 
 	eglSwapBuffers(display->egl.dpy, window->egl_surface);
 }
