@@ -287,11 +287,15 @@ destroy_surface(struct window *window)
 		wl_callback_destroy(window->callback);
 }
 
+int vboIds[3] = {0};
 static void
 redraw(void *data, struct wl_callback *callback, uint32_t time)
 {
 	struct window *window = data;
 	struct display *display = window->display;
+	static const GLushort indices[3] = {0, 1, 2};
+	GLint numIndices = 3;
+	GLint numVertices = 3;
 	static const GLfloat verts[3][2] = {
 		{ -0.5, -0.5 },
 		{  0.5, -0.5 },
@@ -336,15 +340,47 @@ redraw(void *data, struct wl_callback *callback, uint32_t time)
 	glClearColor(0.0, 0.0, 0.0, 0.5);
 	glClear(GL_COLOR_BUFFER_BIT);
 
+#if 0
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, verts);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, colors);
 	glEnableVertexAttribArray(1);
 	
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, indices);
 
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
+#else
+	if(vboIds[0] == 0 && vboIds[1] == 0 && vboIds[2] == 0)
+	{
+		glGenBuffers(3, vboIds);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vboIds[0]);
+		glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(GLfloat) * numVertices, verts, GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, vboIds[1]);
+		glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(GLfloat) * numVertices, colors, GL_STATIC_DRAW);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboIds[2]);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * numIndices, indices, GL_STATIC_DRAW);
+	}
+	
+	glBindBuffer(GL_ARRAY_BUFFER, vboIds[0]);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vboIds[1]);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboIds[2]);
+
+	glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, 0);
+	
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+#endif
 
 	eglSwapBuffers(display->egl.dpy, window->egl_surface);
 }
